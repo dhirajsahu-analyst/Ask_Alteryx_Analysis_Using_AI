@@ -1,0 +1,18 @@
+metrics:
+  user:
+    active_user:
+      sql_logic: "COUNT(DISTINCT IFF(chats > 0, user_email, NULL))"
+      description: "A user who has successfully executed at least 1 prompt."
+    engaged_user:
+      sql_logic: "COUNT(DISTINCT IFF(conversations >= 5, user_email, NULL))"
+      description: "A power user who has participated in >= 5 distinct conversation sessions."
+    workflow_developer:
+      sql_logic: "COUNT(DISTINCT IFF(workflows_touched > 0, user_email, NULL))"
+      description: "A user who has successfully created or touched at least 1 workflow."
+  account:
+    active_account:
+      sql_logic: "COUNT(DISTINCT IFF(total_active_users > 0, customer_id, NULL))"
+      description: "A Salesforce Account containing at least 1 Active User."
+    sfdc_match_key:
+      sql_logic: "COALESCE(NULLIF(TRIM(ACCOUNT_CID), ''), NULLIF(TRIM(SFDC_ACCOUNT_ID), ''))"
+      description: "The primary join key used to align telemetry with Salesforce ACV."
