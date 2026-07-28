@@ -200,7 +200,7 @@ FROM DISCOVERY_PRODUCT_MANAGEMENT.METRIC_STORE.SEM_COPILOT_USER_ACTIVITY_ENRICHE
 WHERE LICENSE_TYPE = 'Purchase' AND CHAT_ID IS NOT NULL AND WORKFLOW_ID IS NOT NULL;
 
 -- Query 13. Percentage of Workflows run by Copilot (June 2026 High-Performance Partition)
--- Optimization: Employs pre-lowercased string mapping ('es_clean') to prevent fanning.
+-- Optimization: Employs pre-lowercased string mapping ('es_clean') on ALTERYX_PAYLOAD_USER_ACCOUNT to prevent fanning.
 WITH copilot_eligible_users AS (
     SELECT DISTINCT USER_EMAIL
     FROM DISCOVERY_PRODUCT_MANAGEMENT.METRIC_STORE.SEM_COPILOT_USER_ACTIVITY_ENRICHED
@@ -216,42 +216,42 @@ first_copilot_interaction AS (
 ),
 es_clean AS (
     SELECT 
-        workflow_id,
-        payload_dts,
+        WORKFLOW_ID,
+        PAYLOAD_DTS,
         PRODUCT_NAME,
-        LOWER(NULLIF(TRIM(email_final), '')) AS email_lc
-    FROM DISCOVERY_PRODUCT_MANAGEMENT.TEL_STRAT.COPILOT_ENGINE_RUN_VW
-    WHERE payload_dts BETWEEN '2026-06-01' AND '2026-06-30' AND PRODUCT_NAME = 'Designer'
+        LOWER(NULLIF(TRIM(USER_EMAIL), '')) AS email_lc
+    FROM DISCOVERY_PRODUCT_MANAGEMENT.TEL_STRAT.ALTERYX_PAYLOAD_USER_ACCOUNT
+    WHERE PAYLOAD_DTS BETWEEN '2026-06-01' AND '2026-06-30' AND PRODUCT_NAME = 'Designer'
 ),
 denominator AS (
     SELECT DISTINCT
-        es.workflow_id,
+        es.WORKFLOW_ID,
         es.email_lc
     FROM es_clean es
     INNER JOIN copilot_eligible_users eu
         ON es.email_lc = eu.USER_EMAIL
     INNER JOIN first_copilot_interaction fci
         ON es.email_lc = fci.user_email
-    WHERE es.payload_dts >= fci.first_conv_created_at
+    WHERE es.PAYLOAD_DTS >= fci.first_conv_created_at
 ),
 numerator AS (
     SELECT DISTINCT
-        es.workflow_id,
+        es.WORKFLOW_ID,
         co.USER_EMAIL AS copilot_email,
         es.email_lc AS engine_email
     FROM DISCOVERY_PRODUCT_MANAGEMENT.METRIC_STORE.SEM_COPILOT_USER_ACTIVITY_ENRICHED co
     LEFT JOIN es_clean es
-        ON co.workflow_id = es.workflow_id
-    WHERE co.workflow_id IS NOT NULL
+        ON co.WORKFLOW_ID = es.WORKFLOW_ID
+    WHERE co.WORKFLOW_ID IS NOT NULL
       AND co.USER_EMAIL IN (SELECT USER_EMAIL FROM copilot_eligible_users)
-      AND co.chat_id IS NOT NULL AND co.ACTIVITY_DATE BETWEEN '2026-06-01' AND '2026-06-30'
+      AND co.CHAT_ID IS NOT NULL AND co.ACTIVITY_DATE BETWEEN '2026-06-01' AND '2026-06-30'
 )
 SELECT
-    (SELECT COUNT(DISTINCT workflow_id) FROM numerator)   AS copilot_mapped_workflow_runs,
-    (SELECT COUNT(DISTINCT workflow_id) FROM denominator) AS copilot_active_user_workflow_run,
+    (SELECT COUNT(DISTINCT WORKFLOW_ID) FROM numerator)   AS copilot_mapped_workflow_runs,
+    (SELECT COUNT(DISTINCT WORKFLOW_ID) FROM denominator) AS copilot_active_user_workflow_run,
     ROUND(
         100.0 *
-        (SELECT COUNT(DISTINCT workflow_id) FROM numerator)::FLOAT /
-        NULLIF((SELECT COUNT(DISTINCT workflow_id) FROM denominator), 0),
+        (SELECT COUNT(DISTINCT WORKFLOW_ID) FROM numerator)::FLOAT /
+        NULLIF((SELECT COUNT(DISTINCT WORKFLOW_ID) FROM denominator), 0),
         4
     ) AS copilot_pct_workflow_runs;
