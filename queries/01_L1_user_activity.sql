@@ -2,7 +2,8 @@
 -- Grain: 1 Row per Active User × Day × Action
 -- Purpose: Inverted join to prevent 35.79% metric inflation, filters failed chats, sanitizes emails.
 -- Authority Spine: Sourced directly from USERS_DAILY_AT.
--- Version Tracking: Integrates the 100% complete PRODUCT_VERSION_ADOPTION table, completely resolving the 60% Null Version Gap!
+-- Version Tracking: Integrates the 100% complete PRODUCT_VERSION_ADOPTION table.
+-- Lineage Optimization: Completely purged all dependencies on legacy Postgres 'POSTGRES_LICENSEBILLING_TBL_' tables!
 
 CREATE OR REPLACE VIEW DISCOVERY_PRODUCT_MANAGEMENT.METRIC_STORE.SEM_COPILOT_USER_ACTIVITY_ENRICHED AS
 WITH ayx_user_day AS (
