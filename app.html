@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ask Alteryx Self-Serve Analytics Portal</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-dark: #090d16;
+            --bg-surface: #0f1424;
+            --bg-card: #181f32;
+            --bg-card-hover: #222c45;
+            --border-color: #26314d;
+            --text-main: #94a3b8;
+            --text-light: #f1f5f9;
+            --text-heading: #ffffff;
+            --accent-orange: #f97316;
+            --accent-blue: #38bdf8;
+            --accent-green: #34d399;
+            --accent-red: #ef4444;
+            --font-main: 'Plus Jakarta Sans', sans-serif;
+            --font-mono: 'Fira Code', monospace;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
+
+        /* Sidebar Dictionary */
+        .sidebar {
+            width: 320px;
+            background-color: var(--bg-surface);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .sidebar-header h2 {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--text-heading);
+        }
+
+        .sidebar-content {
+            flex-grow: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .dict-section-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--accent-orange);
+            margin-bottom: 0.75rem;
+        }
+
+        .dict-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .dict-card:hover {
+            border-color: var(--accent-blue);
+            background-color: var(--bg-card-hover);
+            transform: translateY(-2px);
+        }
+
+        .dict-card h4 {
+            margin: 0;
+            font-size: 0.9rem;
+            color: var(--text-heading);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .dict-card p {
+            margin: 0;
+            font-size: 0.75rem;
+            color: var(--text-main);
+            line-height: 1.35;
+        }
+
+        /* Main Workspace */
+        .workspace {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background-color: var(--bg-dark);
+        }
+
+        .workspace-header {
+            height: 70px;
+            background-color: var(--bg-surface);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+            box-sizing: border-box;
+        }
+
+        .workspace-header h1 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--text-heading);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .db-status-badge {
+            background-color: rgba(52, 211, 153, 0.1);
+            border: 1px solid var(--accent-green);
+            color: var(--accent-green);
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.35rem 0.75rem;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        /* Chat Log Workspace */
+        .chat-log {
+            flex-grow: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            box-sizing: border-box;
+        }
+
+        .chat-bubble {
+            display: flex;
+            gap: 1rem;
+            max-width: 85%;
+            margin-bottom: 0.5rem;
+            animation: bubbleIn 0.3s ease forwards;
+        }
+
+        @keyframes bubbleIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .chat-bubble.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .chat-bubble.ai {
+            align-self: flex-start;
+        }
+
+        .chat-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-blue);
+            flex-shrink: 0;
+        }
+
+        .chat-bubble.user .chat-avatar {
+            color: var(--accent-orange);
+            background-color: rgba(249, 115, 22, 0.1);
+            border-color: var(--accent-orange);
+        }
+
+        .chat-body {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            color: var(--text-light);
+            font-size: 0.9rem;
+            line-height: 1.45;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .chat-bubble.user .chat-body {
+            background-color: var(--accent-orange);
+            color: white;
+            border-color: var(--accent-orange);
+            border-top-right-radius: 2px;
+        }
+
+        .chat-bubble.ai .chat-body {
+            border-top-left-radius: 2px;
+        }
+
+        /* Verification Badge */
+        .qa-badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            display: inline-block;
+            align-self: flex-start;
+        }
+
+        .qa-badge.verified {
+            background-color: rgba(52, 211, 153, 0.15);
+            color: var(--accent-green);
+            border: 1px solid rgba(52, 211, 153, 0.25);
+        }
+
+        .qa-badge.unverified {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: var(--accent-red);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+        }
+
+        /* SQL Details toggle */
+        details.sql-details {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.6rem;
+            font-size: 0.8rem;
+        }
+
+        details.sql-details summary {
+            font-weight: 700;
+            color: var(--accent-blue);
+            cursor: pointer;
+            outline: none;
+        }
+
+        details.sql-details pre {
+            margin: 0.5rem 0 0 0;
+            font-family: var(--font-mono);
+            background-color: var(--bg-dark);
+            padding: 0.6rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            color: #9cdcfe;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* Table Renders */
+        .results-table-container {
+            overflow-x: auto;
+            max-width: 100%;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        table.results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            text-align: left;
+        }
+
+        table.results-table th {
+            background-color: var(--bg-card);
+            color: var(--text-heading);
+            font-weight: 700;
+            padding: 0.6rem 0.85rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        table.results-table td {
+            padding: 0.5rem 0.85rem;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+
+        table.results-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Chat Input Area */
+        .chat-input-area {
+            padding: 1.5rem 2rem;
+            background-color: var(--bg-surface);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            box-sizing: border-box;
+        }
+
+        .input-wrapper {
+            flex-grow: 1;
+            position: relative;
+        }
+
+        .chat-input {
+            width: 100%;
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 0.85rem 1.5rem;
+            color: var(--text-light);
+            font-family: inherit;
+            font-size: 0.9rem;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .chat-input:focus {
+            border-color: var(--accent-blue);
+        }
+
+        .send-btn {
+            background-color: var(--accent-orange);
+            border: none;
+            color: white;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+            flex-shrink: 0;
+        }
+
+        .send-btn:hover {
+            background-color: #ea580c;
+            transform: scale(1.05);
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(56,189,248,0.2);
+            border-radius: 50%;
+            border-top-color: var(--accent-blue);
+            animation: spin 0.8s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Dictionary -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <i class="fa-solid fa-graduation-cap" style="font-size: 1.5rem; color: var(--accent-orange);"></i>
+            <h2>Adoption Metrics</h2>
+        </div>
+        <div class="sidebar-content">
+            <div class="dict-section-title">Foundational Funnels</div>
+            
+            <div class="dict-card" onclick="runMetric('Show me the user onboarding funnel')">
+                <h4>Users Funnel <i class="fa-solid fa-circle-play" style="font-size:0.75rem; color: var(--accent-blue);"></i></h4>
+                <p>Onboarded ➔ Active ➔ Engaged user counts with 0% double-counting.</p>
+            </div>
+
+            <div class="dict-card" onclick="runMetric('Show me the active accounts')">
+                <h4>Accounts Funnel <i class="fa-solid fa-circle-play" style="font-size:0.75rem; color: var(--accent-blue);"></i></h4>
+                <p>Corporate account adoptions mapped to Salesforce CIDs.</p>
+            </div>
+
+            <div class="dict-card" onclick="runMetric('What is our stickiness ratio?')">
+                <h4>User Stickiness <i class="fa-solid fa-circle-play" style="font-size:0.75rem; color: var(--accent-blue);"></i></h4>
+                <p>Weekly and monthly Active User (DAU/MAU) habits tracking.</p>
+            </div>
+
+            <div class="dict-card" onclick="runMetric('What is the percentage of workflows run by copilot?')">
+                <h4>Workflows Run Rate <i class="fa-solid fa-circle-play" style="font-size:0.75rem; color: var(--accent-blue);"></i></h4>
+                <p>Percentage of total designer workflow runs executed by Copilot.</p>
+            </div>
+
+            <div class="dict-section-title">CRM & ROI Metrics</div>
+            
+            <div class="dict-card" onclick="runMetric('Show me account-level ACV ROI density')">
+                <h4>Salesforce ACV ROI <i class="fa-solid fa-circle-play" style="font-size:0.75rem; color: var(--accent-blue);"></i></h4>
+                <p>Tracks corporate contract ROI cost-per-prompt density.</p>
+            </div>
+
+            <div class="dict-card" onclick="runMetric('What software version of copilot is most popular?')">
+                <h4>Version Adoption <i class="fa-solid fa-circle-play" style="font-size:0.75rem; color: var(--accent-blue);"></i></h4>
+                <p>Audits active software versions using Product Version Adoption.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <div class="workspace">
+        <div class="workspace-header">
+            <h1><i class="fa-solid fa-robot" style="color: var(--accent-blue);"></i> Ask Alteryx Self-Serve Analytics</h1>
+            <div class="db-status-badge">
+                <div class="spinner" style="width:10px; height:10px; border-width:2px;"></div>
+                <span>Snowflake Connected (externalbrowser SSO)</span>
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="chat-log" id="chat-log">
+            <!-- AI Welcome Message -->
+            <div class="chat-bubble ai">
+                <div class="chat-avatar"><i class="fa-solid fa-robot"></i></div>
+                <div class="chat-body">
+                    <p style="margin:0;">👋 Hello! I am your **Ask Alteryx MASTER Analytics Agent**.</p>
+                    <p style="margin:0.25rem 0 0 0;">I am connected directly to your highly-optimized, 3-tier view-stack in Snowflake (`SEM_COPILOT`). You can ask me any question in plain English regarding Monthly Active Users, daily adoptions, returning retention, funnels, or account ROIs.</p>
+                    <p style="margin:0.25rem 0 0 0; font-size: 0.8rem; color: var(--text-main);">*Click on any KPI card in the sidebar to run standard metrics, or type your own question in the console below.*</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="chat-input-area">
+            <div class="input-wrapper">
+                <input type="text" class="chat-input" id="chat-input" placeholder="Ask anything about Ask Alteryx metrics (e.g., Show me the MAU trend)..." onkeydown="handleKey(event)">
+            </div>
+            <button class="send-btn" onclick="submitMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <script>
+        const chatLog = document.getElementById("chat-log");
+        const chatInput = document.getElementById("chat-input");
+
+        function appendMessage(text, isUser = false) {
+            const bubble = document.createElement("div");
+            bubble.className = `chat-bubble ${isUser ? 'user' : 'ai'}`;
+            
+            const avatar = document.createElement("div");
+            avatar.className = "chat-avatar";
+            avatar.innerHTML = isUser ? `<i class="fa-solid fa-user"></i>` : `<i class="fa-solid fa-robot"></i>`;
+            
+            const body = document.createElement("div");
+            body.className = "chat-body";
+            
+            // Interpret simple markdown-bolding
+            const formattedText = text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/`(.*?)`/g, '<code>$1</code>');
+                
+            body.innerHTML = `<p style="margin:0; white-space: pre-wrap;">${formattedText}</p>`;
+            
+            bubble.appendChild(avatar);
+            bubble.appendChild(body);
+            chatLog.appendChild(bubble);
+            chatLog.scrollTop = chatLog.scrollHeight;
+            return body; // Return body reference to append tables/badges later
+        }
+
+        function handleKey(e) {
+            if (e.key === "Enter") {
+                submitMessage();
+            }
+        }
+
+        function runMetric(question) {
+            chatInput.value = question;
+            submitMessage();
+        }
+
+        function submitMessage() {
+            const prompt = chatInput.value.trim();
+            if (!prompt) return;
+            
+            // Append User prompt
+            appendMessage(prompt, true);
+            chatInput.value = "";
+            
+            // Append AI Loader bubble
+            const aiBody = appendMessage("Thinking... connecting to Snowflake database...");
+            const spinner = document.createElement("div");
+            spinner.className = "spinner";
+            spinner.style.marginTop = "0.5rem";
+            aiBody.appendChild(spinner);
+            
+            // Fetch API response
+            fetch(`/api/ask?q=${encodeURIComponent(prompt)}`)
+                .then(res => res.json())
+                .then(data => {
+                    spinner.remove();
+                    aiBody.innerHTML = ""; // Clear loader text
+                    
+                    if (data.error) {
+                        aiBody.innerHTML = `<p style="color: var(--accent-red); margin:0;">❌ ${data.error}</p>`;
+                        return;
+                    }
+                    
+                    // Render Header & QA Badge
+                    const isVerified = data.qa_badge.includes("Verified");
+                    const badgeClass = isVerified ? "verified" : "unverified";
+                    aiBody.innerHTML = `
+                        <span class="qa-badge ${badgeClass}"><i class="fa-solid ${isVerified ? 'fa-square-check' : 'fa-triangle-exclamation'}"></i> ${data.qa_badge}</span>
+                        <p style="margin: 0.5rem 0 0 0;">Here are the live metrics fetched from Snowflake for your question:</p>
+                    `;
+                    
+                    // Render Results Table
+                    if (data.records && data.records.length > 0) {
+                        const tableContainer = document.createElement("div");
+                        tableContainer.className = "results-table-container";
+                        tableContainer.style.marginTop = "0.75rem";
+                        
+                        let tableHTML = `<table class="results-table"><thead><tr>`;
+                        data.columns.forEach(col => {
+                            tableHTML += `<th>${col}</th>`;
+                        });
+                        tableHTML += `</tr></thead><tbody>`;
+                        
+                        data.records.forEach(row => {
+                            tableHTML += `<tr>`;
+                            data.columns.forEach(col => {
+                                tableHTML += `<td>${row[col]}</td>`;
+                            });
+                            tableHTML += `</tr>`;
+                        });
+                        tableHTML += `</tbody></table>`;
+                        
+                        tableContainer.innerHTML = tableHTML;
+                        aiBody.appendChild(tableContainer);
+                    } else {
+                        aiBody.innerHTML += `<p style="font-size:0.8rem; color: var(--text-main); margin:0.5rem 0 0 0;">No matching records found.</p>`;
+                    }
+                    
+                    // Render SQL Details dropdown
+                    const details = document.createElement("details");
+                    details.className = "sql-details";
+                    details.style.marginTop = "0.75rem";
+                    details.innerHTML = `
+                        <summary><i class="fa-solid fa-code"></i> View Compiled SQL View Query</summary>
+                        <pre><code>${data.sql}</code></pre>
+                    `;
+                    aiBody.appendChild(details);
+                    chatLog.scrollTop = chatLog.scrollHeight;
+                })
+                .catch(err => {
+                    spinner.remove();
+                    aiBody.innerHTML = `<p style="color: var(--accent-red); margin:0;">❌ Connection error: Could not reach backend server. Please verify VPN or server status.</p>`;
+                });
+        }
+    </script>
+</body>
+</html>
