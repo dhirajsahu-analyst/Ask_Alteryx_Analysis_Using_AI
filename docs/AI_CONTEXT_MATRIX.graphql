@@ -1,0 +1,147 @@
+# ================================================================================
+# ASK ALTERYX (COPILOT) AI COGNITIVE CONTEXT MATRIX
+# Schema Style: Extensible Monolithic GraphQL (Future-Proof for 1 Year Scaling)
+# Purpose: Single source of truth defining entities, joins, metric formulas, 
+#          governance partition gates, and database trap workarounds.
+# ================================================================================
+
+"""
+DIRECTIVES (Data Engineering & Governance Rules)
+These directives instruct the AI SQL compiler on how to handle safety, performance gates, and data cleanups.
+"""
+directive @governance(
+  readOnly: Boolean! = true,
+  partitionGate: String!,
+  launchDateGate: String! = "2025-12-03"
+) on FIELD_DEFINITION | OBJECT
+
+directive @databaseTrap(
+  description: String!,
+  curedByExpression: String!
+) on FIELD_DEFINITION | OBJECT
+
+directive @metricFormula(
+  sqlExpression: String!,
+  description: String!
+) on FIELD_DEFINITION
+
+# ================================================================================
+# SECTION 1: EXTENSIBLE CORE INTERFACES (For 1-Year Scaling to AI Tools & LLM)
+# ================================================================================
+
+interface Product {
+  id: ID!
+  name: String!
+  group: String!
+}
+
+interface TelemetryEvent {
+  payloadId: ID!
+  payloadDts: String!
+  month: String!
+  userId: String!
+  productId: String!
+  workflowId: String
+}
+
+# ================================================================================
+# SECTION 2: PHYSICAL & SEMANTIC TYPES (The Ask Alteryx Schema)
+# ================================================================================
+
+type GenAIProduct implements Product {
+  id: ID!
+  name: String!
+  group: String!
+}
+
+type CopilotTelemetryEvent implements TelemetryEvent @governance(
+  partitionGate: "DATE >= '2025-12-03'::DATE"
+) {
+  payloadId: ID!
+  payloadDts: String!
+  month: String!
+  
+  userId: String! @databaseTrap(
+    description: "The USER_ID is dirty and contains raw emails mixed with base64 encoded IDs. Direct decoding crashes Snowflake.",
+    curedByExpression: "IFF(USER_ID LIKE '%@%', NULL, TRY_TO_NUMBER(SPLIT_PART(TRY_BASE64_DECODE_STRING(USER_ID), '_', 1)))"
+  )
+  
+  productId: String!
+  workflowId: String
+  conversationId: ID
+  chatId: ID
+  metricId: ID
+  
+  # Future-proof token-cost and latency metrics
+  requestDurationMs: Int
+  tokensUsed: Int
+  promptCharacterLength: Int
+  
+  # Structural Joins (Edges)
+  userProfile: UserProfile @join(on: "USER_ID_RAW = decoded_user_id")
+  sfdcAccount: SalesforceAccount @join(on: "FINAL_ACCOUNT_CID = ACCOUNT_CID")
+}
+
+type UserProfile {
+  userIdRaw: Int!
+  userEmail: String! @databaseTrap(
+    description: "Emails contain trailing spaces, internal spaces, and semicolon concatenations in raw logs.",
+    curedByExpression: "LOWER(TRIM(SPLIT_PART(REPLACE(USER_EMAIL, ' ', ''), ';', 1)))"
+  )
+  licenseType: String!
+  status: String! @governance(
+    partitionGate: "STATUS = 'ACTIVATED'"
+  )
+  copilotEnabled: Boolean!
+  accountEdition: String!
+  pipelineRegion: String!
+  
+  # Versionsadoption
+  maxUserVersionObserved: String! @databaseTrap(
+    description: "USERS_DAILY_AT has a 60% null rate for versions, and the column is misspelled.",
+    curedByExpression: "Join to DISCOVERY_PRODUCT_MANAGEMENT.TEL_STRAT.PRODUCT_VERSION_ADOPTION on decoded_user_id and read Max_User_VERSION"
+  )
+}
+
+type SalesforceAccount {
+  accountCid: ID!
+  accountName: String!
+  namedCompany: String!
+  salesRegion: String!
+  marketSegment: String!
+  cloudAcv: Float! @metricFormula(
+    sqlExpression: "COALESCE(CLOUD_ACV, 0.0)",
+    description: "Fills null ACV contracts as 0.0 to prevent sum dropouts."
+  )
+}
+
+# ================================================================================
+# SECTION 3: THE COGNITIVE METRICS DICTIONARY
+# ================================================================================
+
+type CopilotMetricsDictionary {
+  monthlyActiveUsers: Int! @metricFormula(
+    sqlExpression: "COUNT(DISTINCT IFF(chats > 0, user_email, null))",
+    description: "Prunes out failed chats and lists distinct active users."
+  )
+
+  engagedUsers: Int! @metricFormula(
+    sqlExpression: "WITH eng AS (SELECT user_id_raw FROM L1 GROUP BY 1 HAVING COUNT(DISTINCT conversation_id) >= 5) SELECT COUNT(*) FROM eng",
+    description: "Paid users who participated in 5 or more successful, distinct conversations."
+  )
+
+  adoptionRatio: Float! @metricFormula(
+    sqlExpression: "Active Users / NULLIF(Eligible Users, 0)",
+    description: "Active users (chats > 0) divided by eligible validated activated accounts in USERS_DAILY_AT snapshot of today."
+  )
+
+  stickiness: Float! @metricFormula(
+    sqlExpression: "Average DAU / MAU",
+    description: "Measures habitual product utility. IDE benchmark is 25% to 35%."
+  )
+  
+  onePromptBounceRate: Float! @metricFormula(
+    sqlExpression: "Bounced Users (chats = 1) / Total Active Users",
+    description: "Measures first-mile onboarding churn. Current Copilot baseline stands at 85%."
+  )
+}
