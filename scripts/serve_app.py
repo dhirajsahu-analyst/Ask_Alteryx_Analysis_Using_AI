@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import socket
 import urllib.parse
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
@@ -9,7 +10,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from skills.snowflake_connector import execute_query
 from scripts.ai_analytics_console import route_natural_language_question, analyze_query_governance, run_qa_check
 
-PORT = 8080
+START_PORT = 8080
+MAX_PORT_ATTEMPTS = 10
 
 class AskAlteryxHTTPHandler(BaseHTTPRequestHandler):
     """Custom, lightweight REST API and Static File Server with zero external library dependencies."""
@@ -96,17 +98,27 @@ class AskAlteryxHTTPHandler(BaseHTTPRequestHandler):
             self.send_error(500, f"Error reading file: {e}")
 
 def run_server():
-    server_address = ("", PORT)
-    httpd = HTTPServer(server_address, AskAlteryxHTTPHandler)
-    print("================================================================================")
-    print(f"🌐 ASK ALTERYX SELF-SERVE ANALYTICS PORTAL RUNNING LIVE!")
-    print(f"👉 Local Web URL: http://localhost:{PORT}")
-    print("================================================================================")
-    try:
-        httpd.serve_forever()
-    except KeyboardInterrupt:
-        print("\n👋 Web Server shut down successfully.")
-        httpd.server_close()
+    port = START_PORT
+    for attempt in range(MAX_PORT_ATTEMPTS):
+        try:
+            server_address = ("127.0.0.1", port)
+            httpd = HTTPServer(server_address, AskAlteryxHTTPHandler)
+            print("================================================================================")
+            print(f"🌐 ASK ALTERYX SELF-SERVE ANALYTICS PORTAL RUNNING LIVE!")
+            print(f"👉 Local Web URL: http://127.0.0.1:{port}")
+            print("================================================================================")
+            httpd.serve_forever()
+            return
+        except OSError as e:
+            if e.errno == 48: # Address already in use
+                print(f"⚠️ Port {port} is occupied. Scanning next port...")
+                port += 1
+            else:
+                print(f"❌ Socket binding error: {e}")
+                sys.exit(1)
+                
+    print("❌ Critical: Max port scanning attempts exceeded. No available ports found.")
+    sys.exit(1)
 
 if __name__ == "__main__":
     run_server()
